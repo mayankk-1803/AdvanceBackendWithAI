@@ -4,10 +4,14 @@ import connectDB from "./lib/db.js";
 import User from "./models/user.model.js";
 import Redis from "ioredis";
 import rateLimitter from "./middleware/ratelimit.js";
+import emailQueue from "./queue.js";
+
 
 dotenv.config();
 const app = express();
-export const redis = new Redis(process.env.REDIS_URL);
+export const redis = new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: null,
+});
 const PORT = process.env.PORT || 8000;
 
 app.use(express.json());
@@ -27,6 +31,9 @@ app.post("/create", async (req, res) => {
     email,
     password
   })
+
+  await emailQueue.add("send-email", {email});
+
   return res.status(201).json({
     message: "User created successfully",
     user
